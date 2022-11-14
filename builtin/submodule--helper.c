@@ -113,10 +113,9 @@ static char *resolve_relative_url(const char *rel_url, const char *up_path, int 
 }
 
 /* the result should be freed by the caller. */
-static char *get_submodule_displaypath(const char *path, const char *prefix)
+static char *get_submodule_displaypath_sp(const char *path, const char *prefix,
+					  const char *super_prefix)
 {
-	const char *super_prefix = get_super_prefix();
-
 	if (prefix && super_prefix) {
 		BUG("cannot have prefix '%s' and superprefix '%s'",
 		    prefix, super_prefix);
@@ -130,6 +129,13 @@ static char *get_submodule_displaypath(const char *path, const char *prefix)
 	} else {
 		return xstrdup(path);
 	}
+}
+
+static char *get_submodule_displaypath(const char *path, const char *prefix)
+{
+	const char *super_prefix = get_super_prefix();
+
+	return get_submodule_displaypath_sp(path, prefix, super_prefix);
 }
 
 static char *compute_rev_name(const char *sub_path, const char* object_id)
@@ -1365,7 +1371,7 @@ static void deinit_submodule(const char *path, const char *prefix,
 	if (!sub || !sub->name)
 		goto cleanup;
 
-	displaypath = get_submodule_displaypath(path, prefix);
+	displaypath = get_submodule_displaypath_sp(path, prefix, NULL);
 
 	/* remove the submodule work tree (unless the user already did it) */
 	if (is_directory(path)) {
