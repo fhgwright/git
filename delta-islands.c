@@ -454,6 +454,31 @@ static void deduplicate_islands(struct repository *r)
 	free(list);
 }
 
+static void free_island_regexes(void)
+{
+	unsigned int i;
+
+	for (i = 0; i < island_regexes_nr; i++)
+		regfree(&island_regexes[i]);
+
+	FREE_AND_NULL(island_regexes);
+	island_regexes_alloc = island_regexes_nr = 0;
+}
+
+static void free_remote_islands(void)
+{
+	const char *island_name;
+	struct remote_island *rl;
+
+	kh_foreach(remote_islands, island_name, rl, {
+		free((void *)island_name);
+		oid_array_clear(&rl->oids);
+		free(rl);
+	});
+	kh_destroy_str(remote_islands);
+	remote_islands = NULL;
+}
+
 void load_delta_islands(struct repository *r, int progress)
 {
 	island_marks = kh_init_oid_map();
@@ -461,7 +486,9 @@ void load_delta_islands(struct repository *r, int progress)
 
 	git_config(island_config_callback, NULL);
 	for_each_ref(find_island_for_ref, NULL);
+	free_island_regexes();
 	deduplicate_islands(r);
+	free_remote_islands();
 
 	if (progress)
 		fprintf(stderr, _("Marked %d islands, done.\n"), island_counter);
